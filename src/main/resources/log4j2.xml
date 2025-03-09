@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN" monitorInterval="30">
+    <!-- 定义属性，用于指定日志文件路径 -->
+    <Properties>
+        <Property name="logPath">~/logs</Property>
+    </Properties>
+    <!-- 定义 Appenders -->
+    <Appenders>
+        <!-- 控制台输出 -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n"/>
+        </Console>
+        <!-- INFO 日志文件输出 -->
+        <RollingFile name="InfoFile" fileName="${logPath}/info.log"
+                     filePattern="${logPath}/info-%d{yyyy-MM-dd}.log.gz">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n"/>
+            <Filters>
+                <!-- 只允许 INFO 级别日志通过 -->
+                <ThresholdFilter level="INFO" onMatch="ACCEPT" onMismatch="DENY"/>
+            </Filters>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="10 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="10"/>
+        </RollingFile>
+        <!-- ERROR 日志文件输出 -->
+        <RollingFile name="ErrorFile" fileName="${logPath}/error.log"
+                     filePattern="${logPath}/error-%d{yyyy-MM-dd}.log.gz">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n"/>
+            <Filters>
+                <!-- 只允许 ERROR 及以上级别日志通过 -->
+                <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
+            </Filters>
+            <Policies>
+                <TimeBasedTriggeringPolicy/>
+                <SizeBasedTriggeringPolicy size="10 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="10"/>
+        </RollingFile>
+    </Appenders>
+    <!-- 定义 Loggers -->
+    <Loggers>
+        <!-- 根 Logger，默认级别为 WARN -->
+        <Root level="WARN">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="InfoFile"/>
+            <AppenderRef ref="ErrorFile"/>
+        </Root>
+        <!-- 特定包使用 INFO 模式 -->
+        <Logger name="com.example.hsbc.info" level="INFO" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="InfoFile"/>
+            <AppenderRef ref="ErrorFile"/>
+        </Logger>
+        <!-- 特定包使用 DEBUG 模式 -->
+        <Logger name="com.example.hsbc.debug" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="InfoFile"/>
+            <AppenderRef ref="ErrorFile"/>
+        </Logger>
+    </Loggers>
+</Configuration>
