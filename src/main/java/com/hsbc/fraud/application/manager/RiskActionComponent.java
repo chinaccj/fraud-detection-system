@@ -10,7 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 
 @LiteflowComponent(id = "riskAction")
-public class RiskActionComponent extends NodeComponent {
+    public class RiskActionComponent extends NodeComponent {
     @Autowired
     AntiFraudNotify antiFraudNotify;
 

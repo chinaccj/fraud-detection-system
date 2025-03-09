@@ -6,13 +6,8 @@
 <!--    <chain name="riskControlChain">-->
 <!--        IF(amountCheck, riskAction)-->
 <!--    </chain>-->
-
-
-
     <chain name="personal_cross_border_transfer">
         THEN(amountCheck, suspAccountCheck, riskAction )
     </chain>
-
-
 </flow>
 

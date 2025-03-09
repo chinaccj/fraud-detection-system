@@ -1,12 +1,5 @@
 package com.hsbc.fraud.application.service;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
-
-import java.math.BigDecimal;
-import java.time.ZonedDateTime;
-
 import com.hsbc.fraud.application.bo.AntiFraudInput;
 import com.hsbc.fraud.application.bo.TransactionBehavior;
 import com.hsbc.fraud.application.bo.UserIdentity;
@@ -16,7 +9,7 @@ import com.hsbc.fraud.application.event.consumer.EventData;
 import com.hsbc.fraud.infrastructure.dao.ActionTypeEnum;
 import com.hsbc.fraud.infrastructure.dao.AlertEvent;
 import com.hsbc.fraud.infrastructure.dao.AntiFraudNotify;
-import com.yomahub.liteflow.flow.LiteflowResponse;
+import com.yomahub.liteflow.flow.FlowBus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -24,10 +17,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.mock.mockito.SpyBean;
+import java.math.BigDecimal;
+import java.time.ZonedDateTime;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 
-import com.yomahub.liteflow.core.FlowExecutor;
-import com.yomahub.liteflow.flow.FlowBus;
-
+/**
+ *  **测试场景覆盖**：
+ *    - **金额超限**：交易金额超过10000，验证触发`REJECT`。
+ *    - **可疑账户**：账户ID为001或002，验证触发`REJECT`。
+ *    - **无风险交易**：金额和账户均不满足条件，确保不触发风控。
+ */
 @SpringBootTest
 public class AntiFraudProcessorTest {
 
