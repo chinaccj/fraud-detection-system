@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fraud-detection-system
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: fraud-detection-system
+  template:
+    metadata:
+      labels:
+        app: fraud-detection-system
+    spec:
+      containers:
+        - name: main
+          image: registry.cn-hangzhou.aliyuncs.com/your-repo/fraud-detection-system:latest
+          env:
+            - name: ROCKETMQ_NAMESRV_ADDR
+              value: "mq-instance.aliyuncs.com:9876"
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1Gi
+            requests:
+              cpu: "0.5"
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 5
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: fraud-detection-system-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: fraud-detection-system
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
