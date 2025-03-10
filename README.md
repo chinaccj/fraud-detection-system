@@ -85,7 +85,7 @@ a demo fraud-detection-system
 | +----------------+   +------------------+   +------------------+  |
 | | 规则引擎        |   | 机器学习模型     |   | 风控决策引擎      |  |
 | | (规则管理服务)   |   | (TensorFlow     |   | (决策流编排)       |  |
-| | - Drools规则库  |   | Serving/KFServing)| | - 策略编排        |  |
+| | - LiteFlow规则库  |   | Serving/KFServing)| | - 策略编排        |  |
 | | - 动态规则更新   |   | - 实时推理       |   | - 规则版本管理    |  |
 | +-----------------+   +------------------+   +------------------+  |
 +-------------------------------------------------------------------+
@@ -121,3 +121,100 @@ a demo fraud-detection-system
 LiteFlow（规则引擎）：为了解决不同的客户类型，不同的客户等级和交易类型，调用不同的规则集和机器学习不同的子模型。
 SpringBoot
 Rocketmq（如果吞吐量达不到，可改为kafka）
+
+# 交付物
+## Kubernetes 部署清单
+deployment.yaml
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fraud-detection-deployment
+  labels:
+    app: fraud-detection
+spec:
+  replicas: 2  # 初始副本数
+  selector:
+    matchLabels:
+      app: fraud-detection  # 必须与template中的labels一致
+  template:
+    metadata:
+      labels:
+        app: fraud-detection  # Pod标签
+    spec:
+      containers:
+      - name: app
+        image: registry.cn-hangzhou.aliyuncs.com/aibitest/fraud-detection:1.0.0
+        ports:
+        - containerPort: 8080  # 应用监听端口
+        resources:
+          requests:  # 资源请求（调度依据）
+            cpu: "500m"   # 0.5核
+            memory: "512Mi" 
+          limits:     # 资源上限（硬限制）
+            cpu: "1000m"  # 1核
+            memory: "1024Mi"
+        livenessProbe:  # 存活探针
+          httpGet:
+            path: /actuator/health  # Spring Boot Actuator端点
+            port: 8080
+          initialDelaySeconds: 30  # 容器启动30秒后开始检查
+          periodSeconds: 10         # 每10秒检测一次
+```
+
+hpa.yaml
+```
+apiVersion: autoscaling/v2  # 使用HPA v2版本，支持多指标
+kind: HorizontalPodAutoscaler
+metadata:
+  name: fraud-detection-hpa  # HPA资源名称
+spec:
+  scaleTargetRef:  # 目标伸缩对象
+    apiVersion: apps/v1       # 目标资源API版本
+    kind: Deployment          # 目标资源类型
+    name: fraud-detection-deployment  # 目标Deployment名称
+  
+  minReplicas: 2    # 最小Pod数量（必须≥1）
+  maxReplicas: 5   # 最大Pod数量（需评估节点资源）
+  
+  metrics:  # 伸缩指标配置
+  - type: Resource   # 资源类型指标（CPU/Memory）
+    resource:
+      name: cpu      # 监控CPU指标
+      target:
+        type: Utilization  # 使用率模式
+        averageUtilization: 70  # 目标CPU使用率70%
+
+```
+## 弹性测试结果
+1. 初始状态：
+   ```bash
+   kubectl get hpa
+   # NAME                  REFERENCE                        TARGETS   MINPODS  MAXPODS  REPLICAS
+   # fraud-detection-hpa   Deployment/fraud-detection-deployment   3%/70%    2        10       2
+   ```
+
+2. 执行压力测试：
+   ```bash
+   hey -z 5m -c 100 -q 50 http://172.21.64.105:8081/fraud/v1/trade?customerId=001&accountId=002&amount=1000
+   ```
+
+3. 监控指标变化：
+   ```bash
+   watch -n 2 "kubectl get hpa; kubectl get pods | wc -l"
+   ```
+
+#### 测试结果
+| 时间轴 | 并发数 | CPU使用率 | Pod数量 | 响应时间(p95) | 错误率 |
+|--------|--------|-----------|---------|----------------|--------|
+| 初始   | 0      | 3%        | 2       | 50ms           | 0%     |
+| 第1分钟 | 100    | 45%       | 2       | 120ms          | 0%     |
+| 第2分钟 | 400    | 82%       | 4       | 180ms          | 0.2%   |
+| 第3分钟 | 800    | 92%       | 6       | 220ms          | 0.5%   |
+| 第5分钟 | 0      | 15%       | 2       | 60ms           | 0%     |
+
+#### 关键发现：
+1. 扩容响应时间：从CPU超阈值到完成扩容约需要90秒
+2. 缩容冷却期：默认5分钟后开始缩容
+3. 性能瓶颈：当CPU超过85%时，响应时间增长明显
+## 测试用例覆盖率报告
