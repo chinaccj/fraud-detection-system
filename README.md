@@ -218,3 +218,12 @@ spec:
 2. 缩容冷却期：默认5分钟后开始缩容
 3. 性能瓶颈：当CPU超过85%时，响应时间增长明显
 ## 测试用例覆盖率报告
+由于使用了LiteFlow,难以对纯JAVA代码做单元测试，只能做集成测试。
+                      行覆盖率  分支覆盖率
+AntiFraudProcessor	      68%	  	50%
+RiskActionComponent		  91%		100%
+SuspAccountCheckComponent 100%		75%
+AmountCheckComponent	  100%	    100%
+
+
+
